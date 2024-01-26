@@ -13,7 +13,7 @@ parentPort?.on(`message`, async (message: Message) => {
 			parentPort!.postMessage({
 				tag: MessageTag.Return,
 				id: message.id,
-				value: await (await import(message.pa1th))[message.name](...message.args)
+				value: await (await import(message.path))[message.name](...message.args)
 			} satisfies Message)
 		} catch (error) {
 			parentPort!

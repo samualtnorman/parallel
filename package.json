@@ -26,7 +26,7 @@
 		"@samual/lib": "^0.9.1",
 		"@total-typescript/ts-reset": "^0.5.1",
 		"@types/babel__preset-env": "^7.9.6",
-		"@types/node": "^18.19.9",
+		"@types/node": "^18.19.10",
 		"rollup": "^4.9.6",
 		"typescript": "^5.3.3"
 	},
