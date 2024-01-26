@@ -2,7 +2,7 @@ import type { AnyFunction, Async, Entries, Rejecter, Resolver } from "@samual/li
 import { fork } from "child_process"
 import { cpus } from "os"
 import { fileURLToPath } from "url"
-import { ChildToMainMessageTag, type ChildToMainMessage, type TaskMessage } from "./internal"
+import { MessageTag, type Message } from "./internal"
 
 const ProcessModulePath = fileURLToPath(new URL(`process.js`, import.meta.url))
 const idsToPromiseCallbacks = new Map<number, { resolve: Resolver<any>, reject: Rejecter }>
@@ -11,13 +11,13 @@ let idCounter = 0
 const taskers = cpus().map(() => {
 	const tasker = { process: fork(ProcessModulePath, { serialization: `advanced` }), tasks: 0 }
 
-	tasker.process.on(`message`, ({ tag: kind, id, value }: ChildToMainMessage) => {
+	tasker.process.on(`message`, ({ tag: kind, id, value }: Message) => {
 		const { resolve, reject } = idsToPromiseCallbacks.get(id)!
 
 		idsToPromiseCallbacks.delete(id)
 		tasker.tasks--
 
-		if (kind == ChildToMainMessageTag.Return)
+		if (kind == MessageTag.Return)
 			resolve(value)
 		else
 			reject(value)
@@ -39,7 +39,7 @@ export const importInProcess = <
 	const id = idCounter++
 
 	tasker.tasks++
-	tasker.process.send({ id, path: url.href, name, args } satisfies TaskMessage)
+	tasker.process.send({ id, path: url.href, name, args } satisfies Message)
 
 	return new Promise((resolve, reject) => idsToPromiseCallbacks.set(id, { resolve, reject }))
 }) as Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>

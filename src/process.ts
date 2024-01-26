@@ -1,13 +1,13 @@
-import { ChildToMainMessageTag, type ChildToMainMessage, type TaskMessage } from "./internal"
+import { MessageTag, type Message } from "./internal"
 
-process.addListener(`message`, (async ({ args, name, id, path }: TaskMessage) => {
+process.addListener(`message`, (async ({ args, name, id, path }: Message) => {
 	try {
 		process.send!({
-			tag: ChildToMainMessageTag.Return,
+			tag: MessageTag.Return,
 			id,
 			value: await (await import(path))[name](...args)
-		} satisfies ChildToMainMessage)
+		} satisfies Message)
 	} catch (error) {
-		process.send!({ tag: ChildToMainMessageTag.Throw, id, value: error as any } satisfies ChildToMainMessage)
+		process.send!({ tag: MessageTag.Throw, id, value: error as any } satisfies Message)
 	}
 }) as NodeJS.MessageListener)
