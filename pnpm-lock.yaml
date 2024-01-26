@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-dependencies:
-  bleb:
-    specifier: 0.1.0-c7d5a0b
-    version: 0.1.0-c7d5a0b
-
 devDependencies:
   '@babel/preset-env':
     specifier: ^7.23.9
@@ -1485,8 +1480,11 @@ packages:
   /@samual/lib@0.8.1:
     resolution: {integrity: sha512-8x/Lv552u7R3+E4St3Oqa2ajB+cNpEZrWqxKQITTYHNODoNEmf9Mxa/ZqG9Wue14u28M+atkuEFwQx9akSiGuw==}
     engines: {node: '>=16'}
+    requiresBuild: true
     optionalDependencies:
       node-fetch: 3.3.2
+    dev: true
+    optional: true
 
   /@total-typescript/ts-reset@0.5.1:
     resolution: {integrity: sha512-AqlrT8YA1o7Ff5wPfMOL0pvL+1X+sw60NN6CcOCqs658emD6RfiXhF7Gu9QcfKBH7ELY2nInLhKSCWVoNL70MQ==}
@@ -1561,8 +1559,11 @@ packages:
 
   /bleb@0.1.0-c7d5a0b:
     resolution: {integrity: sha512-xhKtbuLK0NkQxveWA+VOau8CilVZgu3NIApVZqZbZMej3KWYpROLsuZFlYEo8j4FhMHlLsLB/t0eKAOQOex/HA==}
+    requiresBuild: true
     dependencies:
       '@samual/lib': 0.8.1
+    dev: true
+    optional: true
 
   /browserslist@4.22.2:
     resolution: {integrity: sha512-0UgcrvQmBDvZHFGdYUehrCNIazki7/lUP3kkoi/r3YB2amZbFM9J43ZRkJTXBUZK4gmx56+Sqk9+Vs9mwZx9+A==}
@@ -1625,6 +1626,7 @@ packages:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
     engines: {node: '>= 12'}
     requiresBuild: true
+    dev: true
     optional: true
 
   /debug@4.3.4:
@@ -1674,6 +1676,7 @@ packages:
     dependencies:
       node-domexception: 1.0.0
       web-streams-polyfill: 3.3.2
+    dev: true
     optional: true
 
   /formdata-polyfill@4.0.10:
@@ -1682,6 +1685,7 @@ packages:
     requiresBuild: true
     dependencies:
       fetch-blob: 3.2.0
+    dev: true
     optional: true
 
   /fsevents@2.3.3:
@@ -1774,6 +1778,7 @@ packages:
     resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
     engines: {node: '>=10.5.0'}
     requiresBuild: true
+    dev: true
     optional: true
 
   /node-fetch@3.3.2:
@@ -1784,6 +1789,7 @@ packages:
       data-uri-to-buffer: 4.0.1
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
+    dev: true
     optional: true
 
   /node-releases@2.0.14:
@@ -1994,6 +2000,7 @@ packages:
     resolution: {integrity: sha512-3pRGuxRF5gpuZc0W+EpwQRmCD7gRqcDOMt688KmdlDAgAyaB1XlN0zq2njfDNm44XVdIouE7pZ6GzbdyH47uIQ==}
     engines: {node: '>= 8'}
     requiresBuild: true
+    dev: true
     optional: true
 
   /yallist@3.1.1:
