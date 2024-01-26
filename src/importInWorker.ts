@@ -1,81 +1,90 @@
-import type { AnyFunction, Async, Cloneable, Entries, Rejecter, Resolver } from "@samual/lib"
+import type { AnyFunction, Async, Cloneable, Entries, Rejecter, Replace, Resolver } from "@samual/lib"
 import { cpus } from "os"
 import { Worker, isMainThread, threadId } from "worker_threads"
-import { MessageTag, type Message } from "./internal"
+import { ResultMessage, TaskAcceptAcceptMessage, TaskAcceptMessage, TaskMessage } from "./internal"
 
 // console.debug(`hello from thread ${threadId}`)
 
-const broadcastChannel = new BroadcastChannel(`oz5iuq2d9vnjoifjitqwwbj2`)
+type BroadcastChannelT<T> = Replace<BroadcastChannel, {
+	postMessage(value: T): void
+	addEventListener(type: "message", listener: (event: MessageEvent<T>) => void): void
+}>
+
+const taskChannel: BroadcastChannelT<TaskMessage> = new BroadcastChannel(`oz5iuq2d9vnjoifjitqwwbj2`)
+const taskAcceptChannel: BroadcastChannelT<TaskAcceptMessage> = new BroadcastChannel(`lu2uxebxuilxcfw940fknu1n`)
+const taskAcceptAcceptChannel: BroadcastChannelT<TaskAcceptAcceptMessage> = new BroadcastChannel(`gd4oaynqe9f6ko42sc4wzqig`)
+const resolveChannel: BroadcastChannelT<ResultMessage> = new BroadcastChannel(`pzbg9syjsoo1mn8wl1y0wdin`)
+const rejectChannel: BroadcastChannelT<ResultMessage> = new BroadcastChannel(`kyrwq81vj30430boo45bqy4x`)
 
 const tasks = new Map<
 	number,
 	{ resolve: Resolver<any>, reject: Rejecter, data: { path: string, name: string, args: Cloneable[] } | undefined }
 >
 
-broadcastChannel.addEventListener("message", async event => {
-	const message: Message = event.data
+if (!isMainThread) {
+	taskChannel.addEventListener("message", event => {
+		taskAcceptChannel.postMessage({
+			taskId: event.data.taskId,
+			fromThreadId: threadId,
+			toThreadId: event.data.fromThreadId
+		})
+	})
+}
 
-	if (message.tag == MessageTag.Task) {
-		if (!isMainThread) {
-			broadcastChannel.postMessage({
-				tag: MessageTag.TaskAccept,
-				taskId: message.taskId,
+taskAcceptChannel.addEventListener("message", event => {
+	if (event.data.toThreadId == threadId) {
+		const task = tasks.get(event.data.taskId)
+
+		if (task?.data) {
+			taskAcceptAcceptChannel.postMessage({
+				taskId: event.data.taskId,
 				fromThreadId: threadId,
-				toThreadId: message.fromThreadId
-			} satisfies Message)
-		}
-	} else if (message.tag == MessageTag.TaskAccept) {
-		if (message.toThreadId == threadId) {
-			const task = tasks.get(message.taskId)
+				toThreadId: event.data.fromThreadId,
+				path: task.data.path,
+				name: task.data.name,
+				args: task.data.args
+			})
 
-			if (task?.data) {
-				broadcastChannel.postMessage({
-					tag: MessageTag.TaskAcceptAccept,
-					taskId: message.taskId,
-					fromThreadId: threadId,
-					toThreadId: message.fromThreadId,
-					path: task.data.path,
-					name: task.data.name,
-					args: task.data.args
-				} satisfies Message)
+			task.data = undefined
+		}
+	}
+})
 
-				task.data = undefined
-			}
+taskAcceptAcceptChannel.addEventListener("message", async event => {
+	if (event.data.toThreadId == threadId) {
+		try {
+			resolveChannel.postMessage({
+				taskId: event.data.taskId,
+				fromThreadId: threadId,
+				toThreadId: event.data.fromThreadId,
+				value: await (await import(event.data.path))[event.data.name](...event.data.args)
+			})
+		} catch (error) {
+			rejectChannel.postMessage({
+				taskId: event.data.taskId,
+				fromThreadId: threadId,
+				toThreadId: event.data.fromThreadId,
+				value: error as any
+			})
 		}
-	} else if (message.tag == MessageTag.TaskAcceptAccept) {
-		if (message.toThreadId == threadId) {
-			try {
-				broadcastChannel.postMessage({
-					tag: MessageTag.Return,
-					taskId: message.taskId,
-					fromThreadId: threadId,
-					toThreadId: message.fromThreadId,
-					value: await (await import(message.path))[message.name](...message.args)
-				} satisfies Message)
-			} catch (error) {
-				broadcastChannel.postMessage({
-					tag: MessageTag.Throw,
-					taskId: message.taskId,
-					fromThreadId: threadId,
-					toThreadId: message.fromThreadId,
-					value: error as any
-				} satisfies Message)
-			}
-		}
-	} else if (message.tag == MessageTag.Return) {
-		if (message.toThreadId == threadId) {
-			const task = tasks.get(message.taskId)!
+	}
+})
 
-			tasks.delete(message.taskId)
-			task.resolve(message.value)
-		}
-	} else if (message.tag == MessageTag.Throw) {
-		if (message.toThreadId == threadId) {
-			const task = tasks.get(message.taskId)!
+resolveChannel.addEventListener("message", event => {
+	if (event.data.toThreadId == threadId) {
+		const task = tasks.get(event.data.taskId)!
 
-			tasks.delete(message.taskId)
-			task.reject(message.value)
-		}
+		tasks.delete(event.data.taskId)
+		task.resolve(event.data.value)
+	}
+})
+
+rejectChannel.addEventListener("message", event => {
+	if (event.data.toThreadId == threadId) {
+		const task = tasks.get(event.data.taskId)!
+
+		tasks.delete(event.data.taskId)
+		task.reject(event.data.value)
 	}
 })
 
@@ -101,6 +110,6 @@ export const importInWorker = <
 
 	return new Promise((resolve, reject) => {
 		tasks.set(taskId, { resolve, reject, data: { path: url.href, name, args } })
-		broadcastChannel.postMessage({ tag: MessageTag.Task, fromThreadId: threadId, taskId } satisfies Message)
+		taskChannel.postMessage({ fromThreadId: threadId, taskId })
 	})
 }) as Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
