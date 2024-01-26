@@ -14,9 +14,6 @@
 		"*"
 	],
 	"repository": "github:samualtnorman/parallel",
-	"dependencies": {
-		"bleb": "0.1.0-c7d5a0b"
-	},
 	"devDependencies": {
 		"@babel/preset-env": "^7.23.9",
 		"@babel/preset-typescript": "^7.23.3",
