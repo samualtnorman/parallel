@@ -1,9 +1,9 @@
 import type { AnyFunction, Async, Cloneable, Entries, Rejecter, Resolver } from "@samual/lib"
 import { cpus } from "os"
-import { Worker, isMainThread, threadId } from "worker_threads"
+import { Worker, isMainThread, parentPort, threadId } from "worker_threads"
 import { MessageTag, type Message } from "./internal"
 
-// console.debug(`hello from thread ${threadId}`)
+parentPort?.postMessage(undefined)
 
 const broadcastChannel = new BroadcastChannel(`oz5iuq2d9vnjoifjitqwwbj2`)
 
@@ -81,12 +81,11 @@ broadcastChannel.addEventListener("message", async event => {
 
 let idCounter = 0
 
-if (isMainThread) {
-	const url = new URL(import.meta.url)
+const url = new URL(import.meta.url)
+let anyOnlinePromise: Promise<unknown>
 
-	for (let index = cpus().length; index--;)
-		new Worker(url)
-}
+if (isMainThread)
+	anyOnlinePromise = Promise.any(cpus().map(() => new Promise(resolve => new Worker(url).on("message", resolve))))
 
 /** @example
   * const heavyFunction = importInWorker<typeof import("./heavyFunction.js"), "heavyFunction">(
@@ -99,8 +98,12 @@ export const importInWorker = <
 >(url: URL, name: TName) => ((...args: any) => {
 	const taskId = idCounter++
 
-	return new Promise((resolve, reject) => {
+	return new Promise(async (resolve, reject) => {
 		tasks.set(taskId, { resolve, reject, data: { path: url.href, name, args } })
+
+		if (anyOnlinePromise)
+			await anyOnlinePromise
+
 		broadcastChannel.postMessage({ tag: MessageTag.Task, fromThreadId: threadId, taskId } satisfies Message)
 	})
 }) as Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>

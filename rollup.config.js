@@ -1,4 +1,4 @@
-#!node_modules/.bin/rollup --config
+#!rollup --config
 import babelPresetEnv from "@babel/preset-env"
 import babelPresetTypescript from "@babel/preset-typescript"
 import { babel } from "@rollup/plugin-babel"
