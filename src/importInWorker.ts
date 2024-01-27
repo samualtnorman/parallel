@@ -1,9 +1,9 @@
 import type { AnyFunction, Async, Cloneable, Entries, Rejecter, Replace, Resolver } from "@samual/lib"
 import { cpus } from "os"
-import { Worker, isMainThread, threadId } from "worker_threads"
+import { Worker, isMainThread, parentPort, threadId } from "worker_threads"
 import { ResultMessage, TaskAcceptAcceptMessage, TaskAcceptMessage, TaskMessage } from "./internal"
 
-// console.debug(`hello from thread ${threadId}`)
+parentPort?.postMessage(undefined)
 
 type BroadcastChannelT<T> = Replace<BroadcastChannel, {
 	postMessage(value: T): void
@@ -90,11 +90,12 @@ rejectChannel.addEventListener("message", event => {
 
 let idCounter = 0
 
-if (isMainThread) {
-	const url = new URL(import.meta.url)
+const url = new URL(import.meta.url)
 
-	for (let index = cpus().length; index--;)
-		new Worker(url)
+let anyOnlinePromise: Promise<unknown>
+
+if (isMainThread) {
+	anyOnlinePromise = Promise.any(cpus().map(() => new Promise(resolve => new Worker(url).on("message", resolve))))
 }
 
 /** @example
@@ -108,8 +109,12 @@ export const importInWorker = <
 >(url: URL, name: TName) => ((...args: any) => {
 	const taskId = idCounter++
 
-	return new Promise((resolve, reject) => {
+	return new Promise(async (resolve, reject) => {
 		tasks.set(taskId, { resolve, reject, data: { path: url.href, name, args } })
+
+		if (anyOnlinePromise)
+			await anyOnlinePromise
+
 		taskChannel.postMessage({ fromThreadId: threadId, taskId })
 	})
 }) as Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
