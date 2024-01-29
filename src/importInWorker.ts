@@ -15,19 +15,19 @@ let importInWorker_: <
 
 if (parentPort) {
 	const { ports, taskCounts } = workerData as WorkerData
+	const workerIndex = ports.findIndex(ports => !ports)
 
-	parentPort.on(`message`, async (message: TaskMessage) => handleMessage(message, parentPort!))
+	parentPort.on(`message`, async (message: TaskMessage) => handleTaskMessage(message, parentPort!))
 
-	for (const [ index, port ] of ports.entries()) {
+	for (const port of ports) {
 		if (port) {
 			port.onmessage = ({ data: message }: MessageEvent<ToChildMessage>) => {
 				if (message.tag == MessageTag.Task)
-					handleMessage(message, port)
+					handleTaskMessage(message, port)
 				else {
 					const { resolve, reject } = idsToPromiseCallbacks.get(message.id)!
 
 					idsToPromiseCallbacks.delete(message.id)
-					taskCounts[index]--
 
 					if (message.tag == MessageTag.Return)
 						resolve(message.value)
@@ -39,21 +39,37 @@ if (parentPort) {
 	}
 
 	importInWorker_ = (url, name) => async (...args) => {
-		const index = [...taskCounts.keys()]
+		const index = [ ...taskCounts.keys() ]
 			.reduce((previous, current) => taskCounts[current]! < taskCounts[previous]! ? current : previous)
 
-		const port = ports[index]
-
-		if (!port)
+		if (index == workerIndex)
+			// TODO investigate if adding `taskCounts[workerIndex]++` and `taskCounts[workerIndex]--` affects performance
 			return (await import(url.href))[name](...args)
 
 		return new Promise((resolve, reject) => {
 			const id = idCounter++
 
-			taskCounts[index]++
 			idsToPromiseCallbacks.set(id, { resolve, reject })
-			port.postMessage({ tag: MessageTag.Task, id, path: url.href, name, args } satisfies ToChildMessage)
+			ports[index]!.postMessage({ tag: MessageTag.Task, id, path: url.href, name, args } satisfies ToChildMessage)
 		})
+	}
+
+	async function handleTaskMessage(message: TaskMessage, port: MessagePort | import("worker_threads").MessagePort) {
+		taskCounts[workerIndex]++
+
+		try {
+			port.postMessage({
+				tag: MessageTag.Return,
+				id: message.id,
+				value: await (await import(message.path))[message.name](...message.args)
+			} satisfies ResultMessage)
+		} catch (error) {
+			port.postMessage(
+				{ tag: MessageTag.Return, id: message.id, value: error as any } satisfies ResultMessage
+			)
+		}
+
+		taskCounts[workerIndex]--
 	}
 } else {
 	const cpuInfos = cpus()
@@ -81,7 +97,6 @@ if (parentPort) {
 			const { resolve, reject } = idsToPromiseCallbacks.get(message.id)!
 
 			idsToPromiseCallbacks.delete(message.id)
-			taskCounts[index]--
 
 			if (message.tag == MessageTag.Return)
 				resolve(message.value)
@@ -98,7 +113,6 @@ if (parentPort) {
 
 		const id = idCounter++
 
-		taskCounts[index]++
 		idsToPromiseCallbacks.set(id, { resolve, reject })
 		workers[index]!.postMessage({ id, path: url.href, name, args } satisfies TaskMessage)
 	}))
@@ -110,17 +124,3 @@ if (parentPort) {
   *     "heavyFunction"
   * ) */
 export const importInWorker = importInWorker_
-
-async function handleMessage(message: TaskMessage, port: MessagePort | import("worker_threads").MessagePort) {
-	try {
-		port.postMessage({
-			tag: MessageTag.Return,
-			id: message.id,
-			value: await (await import(message.path))[message.name](...message.args)
-		} satisfies ResultMessage)
-	} catch (error) {
-		port.postMessage(
-			{ tag: MessageTag.Return, id: message.id, value: error as any } satisfies ResultMessage
-		)
-	}
-}
