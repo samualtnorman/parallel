@@ -1,41 +1,62 @@
 import type { AnyFunction, Async, Entries, Rejecter, Resolver } from "@samual/lib"
 import { cpus } from "os"
-import { Worker, isMainThread, parentPort, threadId, workerData } from "worker_threads"
-import { MessageTag, type Message } from "./internal"
+import { Worker, parentPort, workerData } from "worker_threads"
+import { MessageTag, type ResultMessage, type TaskMessage, type ToChildMessage } from "./internal"
+
+type WorkerData = { ports: (MessagePort | undefined)[], taskCounts: Uint8Array }
 
 const idsToPromiseCallbacks = new Map<number, { resolve: Resolver<any>, reject: Rejecter }>
 let idCounter = 0
 
-parentPort?.on(`message`, async (message: Message) => {
-	if (message.tag == MessageTag.Task) {
-		try {
-			parentPort!.postMessage({
-				tag: MessageTag.Return,
-				id: message.id,
-				value: await (await import(message.path))[message.name](...message.args)
-			} satisfies Message)
-		} catch (error) {
-			parentPort!
-				.postMessage({ tag: MessageTag.Return, id: message.id, value: error as any } satisfies Message)
+let importInWorker_: <
+	TModule extends object,
+	TName extends Extract<Entries<TModule>, [ string, AnyFunction ]>[0]
+>(url: URL, name: TName) => Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
+
+if (parentPort) {
+	const { ports, taskCounts } = workerData as WorkerData
+
+	parentPort.on(`message`, async (message: TaskMessage) => handleMessage(message, parentPort!))
+
+	for (const [ index, port ] of ports.entries()) {
+		if (port) {
+			port.onmessage = ({ data: message }: MessageEvent<ToChildMessage>) => {
+				if (message.tag == MessageTag.Task)
+					handleMessage(message, port)
+				else {
+					const { resolve, reject } = idsToPromiseCallbacks.get(message.id)!
+
+					idsToPromiseCallbacks.delete(message.id)
+					taskCounts[index]--
+
+					if (message.tag == MessageTag.Return)
+						resolve(message.value)
+					else
+						reject(message.value)
+				}
+			}
 		}
-	} else {
-		const { resolve, reject } = idsToPromiseCallbacks.get(message.id)!
-
-		idsToPromiseCallbacks.delete(message.id)
-
-		if (message.tag == MessageTag.Return)
-			resolve(message.value)
-		else
-			reject(message.value)
 	}
-})
 
-let taskCounts: Uint8Array
-let workers: Worker[] | undefined
+	importInWorker_ = (url, name) => async (...args) => {
+		const index = [...taskCounts.keys()]
+			.reduce((previous, current) => taskCounts[current]! < taskCounts[previous]! ? current : previous)
 
-if (isMainThread) {
+		const port = ports[index]
+
+		if (!port)
+			return (await import(url.href))[name](...args)
+
+		return new Promise((resolve, reject) => {
+			const id = idCounter++
+
+			taskCounts[index]++
+			idsToPromiseCallbacks.set(id, { resolve, reject })
+			port.postMessage({ tag: MessageTag.Task, id, path: url.href, name, args } satisfies ToChildMessage)
+		})
+	}
+} else {
 	const cpuInfos = cpus()
-	taskCounts = new Uint8Array(new SharedArrayBuffer(cpuInfos.length))
 	const messagePorts = cpuInfos.map(() => cpuInfos.map((): MessagePort | undefined => undefined))
 
 	for (let fromIndex = 4; fromIndex--;) {
@@ -48,54 +69,39 @@ if (isMainThread) {
 	}
 
 	const thisModuleUrl = new URL(import.meta.url)
+	const taskCounts = new Uint8Array(new SharedArrayBuffer(cpuInfos.length))
 
-	workers = cpuInfos.map((_, index) => {
+	const workers = cpuInfos.map((_, index) => {
 		const worker = new Worker(thisModuleUrl, {
-			workerData: { ports: messagePorts[index], taskCounts },
+			workerData: { ports: messagePorts[index]!, taskCounts } satisfies WorkerData,
 			transferList: messagePorts[index]!.filter(Boolean) as any
 		})
 
-		tasker.worker.on(`message`, (message: Message) => {
-			if (message.tag == MessageTag.Task) {
-				// let otherWorker = workers![0]!
-				// let otherWorkerTaskCount = taskCounts[0]!
+		worker.on(`message`, (message: ResultMessage) => {
+			const { resolve, reject } = idsToPromiseCallbacks.get(message.id)!
 
-				// for (let index = 1; index < )
+			idsToPromiseCallbacks.delete(message.id)
+			taskCounts[index]--
 
-				const otherTasker = workers!
-					.reduce((previous, current, index) => previous.tasks > current.tasks ? current : previous)
-
-				const id = idCounter++
-
-				otherTasker.tasks++
-				otherTasker.worker.postMessage({ ...message, id } satisfies Message)
-
-				idsToPromiseCallbacks.set(id, {
-					resolve(value) {
-						tasker.worker.postMessage({ tag: MessageTag.Return, id: message.id, value } satisfies Message)
-					},
-					reject(value: any) {
-						tasker.worker.postMessage({ tag: MessageTag.Throw, id: message.id, value } satisfies Message)
-					}
-				})
-			} else {
-				const { resolve, reject } = idsToPromiseCallbacks.get(message.id)!
-
-				idsToPromiseCallbacks.delete(message.id)
-				tasker.tasks--
-
-				if (message.tag == MessageTag.Return)
-					resolve(message.value)
-				else
-					reject(message.value)
-			}
+			if (message.tag == MessageTag.Return)
+				resolve(message.value)
+			else
+				reject(message.value)
 		})
 
-		return tasker
+		return worker
 	})
-} else {
-	taskCounts = workerData.taskCounts
-	console.log(threadId, workerData)
+
+	importInWorker_ = (url, name) => ((...args) => new Promise((resolve, reject) => {
+		const index = [ ...taskCounts.keys() ]
+			.reduce((previous, current) => taskCounts[current]! < taskCounts[previous]! ? current : previous)
+
+		const id = idCounter++
+
+		taskCounts[index]++
+		idsToPromiseCallbacks.set(id, { resolve, reject })
+		workers[index]!.postMessage({ id, path: url.href, name, args } satisfies TaskMessage)
+	}))
 }
 
 /** @example
@@ -103,29 +109,18 @@ if (isMainThread) {
   *     new URL("./heavyFunction.js", import.meta.url),
   *     "heavyFunction"
   * ) */
-export const importInWorker = taskers
-	? <
-		TModule extends object,
-		TName extends Extract<Entries<TModule>, [ string, AnyFunction ]>[0]
-	>(url: URL, name: TName) => ((...args: any) => {
-		const tasker = taskers.reduce((previous, current) => previous.tasks > current.tasks ? current : previous)
-		const id = idCounter++
+export const importInWorker = importInWorker_
 
-		tasker.tasks++
-
-		return new Promise((resolve, reject) => {
-			idsToPromiseCallbacks.set(id, { resolve, reject })
-			tasker.worker.postMessage({ tag: MessageTag.Task, id, path: url.href, name, args } satisfies Message)
-		})
-	}) as Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
-	: <
-		TModule extends object,
-		TName extends Extract<Entries<TModule>, [ string, AnyFunction ]>[0]
-	>(url: URL, name: TName) => ((...args: any) => {
-		const id = idCounter++
-
-		return new Promise((resolve, reject) => {
-			idsToPromiseCallbacks.set(id, { resolve, reject })
-			parentPort!.postMessage({ tag: MessageTag.Task, id, args, name, path: url.href } satisfies Message)
-		})
-	}) as Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
+async function handleMessage(message: TaskMessage, port: MessagePort | import("worker_threads").MessagePort) {
+	try {
+		port.postMessage({
+			tag: MessageTag.Return,
+			id: message.id,
+			value: await (await import(message.path))[message.name](...message.args)
+		} satisfies ResultMessage)
+	} catch (error) {
+		port.postMessage(
+			{ tag: MessageTag.Return, id: message.id, value: error as any } satisfies ResultMessage
+		)
+	}
+}

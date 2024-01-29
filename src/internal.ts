@@ -1,14 +1,17 @@
 import type { Cloneable } from "@samual/lib"
 
+export type TaskMessage = { id: number, path: string, name: string, args: Cloneable[] }
+
 export const MessageTag = {
-	Return: 0,
-	Throw: 1,
-	Task: 2
+	Task: 0,
+	Return: 1,
+	Throw: 2
 	// TODO Can be expanded to `yield` in the future
 } as const
 
 export type MessageTag = typeof MessageTag[keyof typeof MessageTag]
 
-export type Message =
-	{ tag: typeof MessageTag.Return | typeof MessageTag.Throw, id: number, value: Cloneable } |
-	{ tag: typeof MessageTag.Task, id: number, path: string, name: string, args: Cloneable[] }
+export type ResultMessage =
+	{ tag: typeof MessageTag.Return | typeof MessageTag.Throw, id: number, value: Cloneable }
+
+export type ToChildMessage = ResultMessage | (TaskMessage & { tag: typeof MessageTag.Task })
