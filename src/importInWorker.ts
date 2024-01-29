@@ -3,7 +3,10 @@ import { cpus } from "os"
 import { Worker, parentPort, workerData } from "worker_threads"
 import { MessageTag, type ResultMessage, type TaskMessage, type ToChildMessage } from "./internal"
 
-type WorkerData = { ports: (MessagePort | undefined)[], taskCounts: Uint8Array }
+type WorkerData = { k14nyo0s378girc3yy7an24u: undefined, ports: (MessagePort | undefined)[], taskCounts: Uint8Array }
+
+const isWorkerData = (workerData: unknown): workerData is WorkerData =>
+	!!workerData && typeof workerData == `object` && "k14nyo0s378girc3yy7an24u" in workerData
 
 const idsToPromiseCallbacks = new Map<number, { resolve: Resolver<any>, reject: Rejecter }>
 let idCounter = 0
@@ -13,11 +16,11 @@ let importInWorker_: <
 	TName extends Extract<Entries<TModule>, [ string, AnyFunction ]>[0]
 >(url: URL, name: TName) => Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
 
-if (parentPort) {
-	const { ports, taskCounts } = workerData as WorkerData
+if (isWorkerData(workerData)) {
+	const { ports, taskCounts } = workerData
 	const workerIndex = ports.findIndex(ports => !ports)
 
-	parentPort.on(`message`, async (message: TaskMessage) => handleTaskMessage(message, parentPort!))
+	parentPort!.on(`message`, async (message: TaskMessage) => handleTaskMessage(message, parentPort!))
 
 	for (const port of ports) {
 		if (port) {
@@ -89,7 +92,8 @@ if (parentPort) {
 
 	const workers = cpuInfos.map((_, index) => {
 		const worker = new Worker(thisModuleUrl, {
-			workerData: { ports: messagePorts[index]!, taskCounts } satisfies WorkerData,
+			workerData:
+				{ k14nyo0s378girc3yy7an24u: undefined, ports: messagePorts[index]!, taskCounts } satisfies WorkerData,
 			transferList: messagePorts[index]!.filter(Boolean) as any
 		})
 
@@ -103,6 +107,8 @@ if (parentPort) {
 			else
 				reject(message.value)
 		})
+
+		worker.on("error", error => console.error(`Caught`, error))
 
 		return worker
 	})
