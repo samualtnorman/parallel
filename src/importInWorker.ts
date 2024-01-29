@@ -75,7 +75,7 @@ if (parentPort) {
 	const cpuInfos = cpus()
 	const messagePorts = cpuInfos.map(() => cpuInfos.map((): MessagePort | undefined => undefined))
 
-	for (let fromIndex = 4; fromIndex--;) {
+	for (let fromIndex = cpuInfos.length; fromIndex--;) {
 		for (let toIndex = fromIndex; toIndex--;) {
 			const { port1, port2 } = new MessageChannel
 
