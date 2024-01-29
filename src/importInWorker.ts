@@ -3,8 +3,6 @@ import { cpus } from "os"
 import { Worker, isMainThread, parentPort, threadId } from "worker_threads"
 import { MessageTag, type Message } from "./internal"
 
-parentPort?.postMessage(undefined)
-
 const broadcastChannel = new BroadcastChannel(`oz5iuq2d9vnjoifjitqwwbj2`)
 
 const tasks = new Map<
@@ -78,6 +76,8 @@ broadcastChannel.addEventListener("message", async event => {
 		}
 	}
 })
+
+parentPort?.postMessage(undefined)
 
 let idCounter = 0
 
