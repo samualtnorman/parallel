@@ -37,7 +37,7 @@ The test is `fibonacci(26)` found in [`src/test/fibonacci.ts`](src/test/fibonacc
 
 | Name                                     | Commit  | Average Time |
 | ---------------------------------------- | ------- | ------------ |
-| thread to thread communication           | e10f97c | 1.673s       |
+| thread to thread communication           | e10f97c | 863.917ms    |
 | thread to parent to thread communication | d6650d7 | 2.518s       |
 | broadcast channel per message type       | 03daea0 | 14.3s        |
 | single broadcast channel                 | 5bfa590 | 18.105s      |
