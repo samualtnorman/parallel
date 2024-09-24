@@ -58,7 +58,7 @@ if (isWorkerData(workerData)) {
 	}
 
 	async function handleTaskMessage(message: TaskMessage, port: MessagePort | import("worker_threads").MessagePort) {
-		taskCounts[workerIndex]++
+		taskCounts[workerIndex]!++
 
 		try {
 			port.postMessage({
@@ -72,7 +72,7 @@ if (isWorkerData(workerData)) {
 			)
 		}
 
-		taskCounts[workerIndex]--
+		taskCounts[workerIndex]!--
 	}
 } else {
 	const cpuInfos = cpus()
