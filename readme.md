@@ -1,6 +1,6 @@
 # Parallel
 
-Requires Node.js 18.19.0 or later.
+Requires Node.js 18.20+, 20.10+, 22.0+, or above.
 
 ## Approach Comparisons
 

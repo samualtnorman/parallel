@@ -23,7 +23,7 @@
 		"typescript": "^5.3.3"
 	},
 	"engines": {
-		"node": ">=18.19.0"
+		"node": "^18.20 || ^20.10 || >=22"
 	},
 	"private": true,
 	"exports": {
