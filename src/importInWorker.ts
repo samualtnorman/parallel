@@ -1,3 +1,4 @@
+import { expect } from "@samual/assert"
 import type { AnyFunction, Async, Entries, Rejecter, Resolver } from "@samual/lib"
 import { cpus } from "os"
 import { Worker, parentPort, workerData } from "worker_threads"
@@ -103,6 +104,13 @@ if (isWorkerData(workerData)) {
 			const { resolve, reject } = idsToPromiseCallbacks.get(message.id)!
 
 			idsToPromiseCallbacks.delete(message.id)
+
+			if (!idsToPromiseCallbacks.size) {
+				for (const worker of expect(workersCache))
+					worker.terminate()
+
+				workersCache = undefined
+			}
 
 			if (message.tag == MessageTag.Return)
 				resolve(message.value)

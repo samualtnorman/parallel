@@ -14,6 +14,9 @@
 		"*"
 	],
 	"repository": "github:samualtnorman/parallel",
+	"dependencies": {
+		"@samual/assert": "0.0.1-da0fbad"
+	},
 	"devDependencies": {
 		"@samual/lib": "^0.12.0",
 		"@samual/rollup-config": "^0.1.1",
