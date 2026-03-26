@@ -90,7 +90,9 @@ if (isWorkerData(workerData)) {
 	const thisModuleUrl = new URL(import.meta.url)
 	const taskCounts = new Uint32Array(new SharedArrayBuffer(cpuInfos.length * 4))
 
-	const workers = cpuInfos.map((_, index) => {
+	let workersCache: Worker[] | undefined
+
+	const getWorkers = () => workersCache ||= cpuInfos.map((_, index) => {
 		const worker = new Worker(thisModuleUrl, {
 			workerData:
 				{ k14nyo0s378girc3yy7an24u: undefined, ports: messagePorts[index]!, taskCounts } satisfies WorkerData,
@@ -120,7 +122,7 @@ if (isWorkerData(workerData)) {
 		const id = idCounter++
 
 		idsToPromiseCallbacks.set(id, { resolve, reject })
-		workers[index]!.postMessage({ id, path: url.href, name, args } satisfies TaskMessage)
+		getWorkers()[index]!.postMessage({ id, path: url.href, name, args } satisfies TaskMessage)
 	}))
 }
 
