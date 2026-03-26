@@ -3,7 +3,7 @@ import { cpus } from "os"
 import { Worker, parentPort, workerData } from "worker_threads"
 import { MessageTag, type ResultMessage, type TaskMessage, type ToChildMessage } from "./internal"
 
-type WorkerData = { k14nyo0s378girc3yy7an24u: undefined, ports: (MessagePort | undefined)[], taskCounts: Uint8Array }
+type WorkerData = { k14nyo0s378girc3yy7an24u: undefined, ports: (MessagePort | undefined)[], taskCounts: Uint32Array }
 
 const isWorkerData = (workerData: unknown): workerData is WorkerData =>
 	!!workerData && typeof workerData == `object` && "k14nyo0s378girc3yy7an24u" in workerData
@@ -88,7 +88,7 @@ if (isWorkerData(workerData)) {
 	}
 
 	const thisModuleUrl = new URL(import.meta.url)
-	const taskCounts = new Uint8Array(new SharedArrayBuffer(cpuInfos.length))
+	const taskCounts = new Uint32Array(new SharedArrayBuffer(cpuInfos.length * 4))
 
 	const workers = cpuInfos.map((_, index) => {
 		const worker = new Worker(thisModuleUrl, {
