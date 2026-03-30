@@ -60,7 +60,7 @@ if (isWorkerData(workerData)) {
 			const id = idCounter++
 
 			idsToPromiseCallbacks.set(id, { resolve, reject })
-			ports[index]!.postMessage({ tag: MessageTag.Task, id, path: moduleName, name, args } satisfies ToChildMessage)
+			ports[index]!.postMessage({ tag: MessageTag.Task, id, moduleName, name, args } satisfies ToChildMessage)
 		})
 	}
 
@@ -71,7 +71,7 @@ if (isWorkerData(workerData)) {
 			port.postMessage({
 				tag: MessageTag.Return,
 				id: message.id,
-				value: await (await import(message.path))[message.name](...message.args)
+				value: await (await import(message.moduleName))[message.name](...message.args)
 			} satisfies ResultMessage)
 		} catch (error) {
 			port.postMessage(
@@ -138,7 +138,7 @@ if (isWorkerData(workerData)) {
 		const id = idCounter++
 
 		idsToPromiseCallbacks.set(id, { resolve, reject })
-		getWorkers()[index]!.postMessage({ id, path: moduleName, name, args } satisfies TaskMessage)
+		getWorkers()[index]!.postMessage({ id, moduleName, name, args } satisfies TaskMessage)
 	}))
 }
 

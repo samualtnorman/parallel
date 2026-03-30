@@ -1,6 +1,6 @@
 import type { Cloneable } from "@samual/types"
 
-export type TaskMessage = { id: number, path: string, name: string, args: Cloneable[] }
+export type TaskMessage = { id: number, moduleName: string, name: string, args: Cloneable[] }
 
 export const MessageTag = {
 	Task: 0,
