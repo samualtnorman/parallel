@@ -11,10 +11,10 @@ importers:
       '@samual/assert':
         specifier: 0.0.1-da0fbad
         version: 0.0.1-da0fbad
+      '@samual/types':
+        specifier: ^0.0.2
+        version: 0.0.2
     devDependencies:
-      '@samual/lib':
-        specifier: ^0.12.0
-        version: 0.12.0
       '@samual/rollup-config':
         specifier: ^0.1.1
         version: 0.1.1(@babel/core@7.25.2)(prettier@3.3.3)(rollup@4.22.4)
@@ -804,13 +804,13 @@ packages:
     resolution: {integrity: sha512-O1rQWS3EHbMKUAfaD3qY/SxsYDarlDtNIeJjPvUZiLmO3eeNuVvEtcnKbvWdywIq0ttW6oS5Nmcsm3JkpDeGsQ==}
     engines: {node: ^18 || >=20}
 
-  '@samual/lib@0.12.0':
-    resolution: {integrity: sha512-PUJ1mguo9QunN6dbEFCbgdhJcLwIweG1J7hNJRy0Ud9KjzujPDVuP564HTIHBFUKhopArn/NEOFm0I/bGVLksg==}
-    engines: {node: ^18.20 || ^20.10 || >=22}
-
   '@samual/rollup-config@0.1.1':
     resolution: {integrity: sha512-kVuMx660aYXxrWBeb9pKWFBOdfuVwcYanO5EH0ylris+bfnhbD1rFAQfqElI2ajyj9IdVPF2r63+LvXaXv8Iiw==}
     engines: {node: ^18 || >=20}
+
+  '@samual/types@0.0.2':
+    resolution: {integrity: sha512-iRbfdz4Kc6fg1IYz0KughcbX8JeMynPiaPyGEprnFC9ROdR6Pxlg0VZxGgIWkMTrAxaCoo90lgfGlWzvIni7kg==}
+    engines: {node: ^20.10 || >=22}
 
   '@samual/types@0.0.2-23ffc7f':
     resolution: {integrity: sha512-6vqdhFUB2mcW+E2S+OdLLXuBZeg7+GL6ocAq4XqD7OiTG24MOnvFpiTDk2XxkBgAYHmVqfX/tABfgYAros1a3w==}
@@ -2052,8 +2052,6 @@ snapshots:
 
   '@samual/lib@0.11.0': {}
 
-  '@samual/lib@0.12.0': {}
-
   '@samual/rollup-config@0.1.1(@babel/core@7.25.2)(prettier@3.3.3)(rollup@4.22.4)':
     dependencies:
       '@babel/preset-env': 7.25.4(@babel/core@7.25.2)
@@ -2072,6 +2070,8 @@ snapshots:
       - prettier
       - rollup
       - supports-color
+
+  '@samual/types@0.0.2': {}
 
   '@samual/types@0.0.2-23ffc7f': {}
 

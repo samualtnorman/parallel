@@ -15,10 +15,10 @@
 	],
 	"repository": "github:samualtnorman/parallel",
 	"dependencies": {
-		"@samual/assert": "0.0.1-da0fbad"
+		"@samual/assert": "0.0.1-da0fbad",
+		"@samual/types": "^0.0.2"
 	},
 	"devDependencies": {
-		"@samual/lib": "^0.12.0",
 		"@samual/rollup-config": "^0.1.1",
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@types/node": "^20.10.8",

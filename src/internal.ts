@@ -1,4 +1,4 @@
-import type { Cloneable } from "@samual/lib"
+import type { Cloneable } from "@samual/types"
 
 export type TaskMessage = { id: number, path: string, name: string, args: Cloneable[] }
 
