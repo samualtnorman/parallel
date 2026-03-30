@@ -1,10 +1,8 @@
 import { importInWorker } from "../importInWorker"
 import { isMainThread } from "worker_threads"
 
-const asyncFibonacci = importInWorker<typeof import("./fibonacci.js"), "fibonacci">(
-	new URL("./fibonacci.js", import.meta.url),
-	"fibonacci"
-)
+const asyncFibonacci =
+	importInWorker<typeof import("./fibonacci.js")>(new URL("./fibonacci.js", import.meta.url))("fibonacci")
 
 export async function fibonacci(n: number): Promise<number> {
 	// console.log(`${threadId} fibonacci(${n})`)

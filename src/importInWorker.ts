@@ -12,10 +12,9 @@ const isWorkerData = (workerData: unknown): workerData is WorkerData =>
 const idsToPromiseCallbacks = new Map<number, { resolve: Resolver<any>, reject: Rejecter }>
 let idCounter = 0
 
-let importInWorker_: <
-	TModule extends object,
-	TName extends string & keyof PickByValue<TModule, AnyFunction>
->(url: URL, name: TName) => Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
+let importInWorker_: <TModule extends object>(url: URL) =>
+	<TName extends string & keyof PickByValue<TModule, AnyFunction>>(name: TName) =>
+		Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
 
 if (isWorkerData(workerData)) {
 	const { ports, taskCounts } = workerData
@@ -42,7 +41,7 @@ if (isWorkerData(workerData)) {
 		}
 	}
 
-	importInWorker_ = (url, name) => async (...args) => {
+	importInWorker_ = url => name => async (...args) => {
 		const index = [ ...taskCounts.keys() ]
 			.reduce((previous, current) => taskCounts[current]! < taskCounts[previous]! ? current : previous)
 
@@ -123,7 +122,7 @@ if (isWorkerData(workerData)) {
 		return worker
 	})
 
-	importInWorker_ = (url, name) => ((...args) => new Promise((resolve, reject) => {
+	importInWorker_ = url => name => ((...args) => new Promise((resolve, reject) => {
 		const index = [ ...taskCounts.keys() ]
 			.reduce((previous, current) => taskCounts[current]! < taskCounts[previous]! ? current : previous)
 
@@ -135,8 +134,7 @@ if (isWorkerData(workerData)) {
 }
 
 /** @example
-  * const heavyFunction = importInWorker<typeof import("./heavyFunction.js"), "heavyFunction">(
-  *     new URL("./heavyFunction.js", import.meta.url),
-  *     "heavyFunction"
-  * ) */
+  * const heavyFunction =
+  *     importInWorker<typeof import("./heavyFunction.js")>(new URL("./heavyFunction.js", import.meta.url))("heavyFunction")
+  */
 export const importInWorker = importInWorker_
