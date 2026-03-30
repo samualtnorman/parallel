@@ -1,4 +1,4 @@
-import { importInWorker } from "../importInWorker"
+import { importInWorker } from "../dist/importInWorker.js"
 import { isMainThread } from "worker_threads"
 
 const asyncFibonacci =
