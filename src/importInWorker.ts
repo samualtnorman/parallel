@@ -1,5 +1,5 @@
 import { expect } from "@samual/assert"
-import type { AnyFunction, Async, Rejecter, Resolver } from "@samual/types"
+import type { AnyFunction, Async, PickByValue, Rejecter, Resolver } from "@samual/types"
 import { cpus } from "os"
 import { Worker, parentPort, workerData } from "worker_threads"
 import { MessageTag, type ResultMessage, type TaskMessage, type ToChildMessage } from "./internal"
@@ -14,7 +14,7 @@ let idCounter = 0
 
 let importInWorker_: <
 	TModule extends object,
-	TName extends string & keyof { [K in keyof TModule as TModule[K] extends AnyFunction ? K : never]: 0 }
+	TName extends string & keyof PickByValue<TModule, AnyFunction>
 >(url: URL, name: TName) => Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
 
 if (isWorkerData(workerData)) {
