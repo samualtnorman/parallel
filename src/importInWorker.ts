@@ -77,9 +77,9 @@ if (isWorkerData(workerData)) {
 			port.postMessage(
 				{ tag: MessageTag.Return, id: message.id, value: error as any } satisfies ResultMessage
 			)
+		} finally {
+			taskCounts[workerIndex]!--
 		}
-
-		taskCounts[workerIndex]!--
 	}
 } else {
 	const cpuInfos = cpus()
