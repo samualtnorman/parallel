@@ -12,9 +12,14 @@ const isWorkerData = (workerData: unknown): workerData is WorkerData =>
 const idsToPromiseCallbacks = new Map<number, { resolve: Resolver<any>, reject: Rejecter }>
 let idCounter = 0
 
-let importInWorker_: <TModule extends object>(url: URL) =>
+let importInWorker_: <TModule extends object>(moduleName: string) =>
 	<TName extends string & keyof PickByValue<TModule, AnyFunction>>(name: TName) =>
 		Async<TModule[TName] extends AnyFunction ? TModule[TName] : never>
+
+const validateModuleName = (moduleName: string) => {
+	if (moduleName.startsWith(`./`))
+		throw TypeError(`Cannot use relative imports. Use new URL("./relative-module.js", import.meta.url).href`)
+}
 
 if (isWorkerData(workerData)) {
 	const { ports, taskCounts } = workerData
@@ -41,19 +46,21 @@ if (isWorkerData(workerData)) {
 		}
 	}
 
-	importInWorker_ = url => name => async (...args) => {
+	importInWorker_ = moduleName => name => async (...args) => {
+		validateModuleName(moduleName)
+
 		const index = [ ...taskCounts.keys() ]
 			.reduce((previous, current) => taskCounts[current]! < taskCounts[previous]! ? current : previous)
 
 		if (index == workerIndex)
 			// TODO investigate if adding `taskCounts[workerIndex]++` and `taskCounts[workerIndex]--` affects performance
-			return (await import(url.href))[name](...args)
+			return (await import(moduleName))[name](...args)
 
 		return new Promise((resolve, reject) => {
 			const id = idCounter++
 
 			idsToPromiseCallbacks.set(id, { resolve, reject })
-			ports[index]!.postMessage({ tag: MessageTag.Task, id, path: url.href, name, args } satisfies ToChildMessage)
+			ports[index]!.postMessage({ tag: MessageTag.Task, id, path: moduleName, name, args } satisfies ToChildMessage)
 		})
 	}
 
@@ -122,19 +129,21 @@ if (isWorkerData(workerData)) {
 		return worker
 	})
 
-	importInWorker_ = url => name => ((...args) => new Promise((resolve, reject) => {
+	importInWorker_ = moduleName => name => ((...args) => new Promise((resolve, reject) => {
+		validateModuleName(moduleName)
+
 		const index = [ ...taskCounts.keys() ]
 			.reduce((previous, current) => taskCounts[current]! < taskCounts[previous]! ? current : previous)
 
 		const id = idCounter++
 
 		idsToPromiseCallbacks.set(id, { resolve, reject })
-		getWorkers()[index]!.postMessage({ id, path: url.href, name, args } satisfies TaskMessage)
+		getWorkers()[index]!.postMessage({ id, path: moduleName, name, args } satisfies TaskMessage)
 	}))
 }
 
 /** @example
   * const heavyFunction =
-  *     importInWorker<typeof import("./heavyFunction.js")>(new URL("./heavyFunction.js", import.meta.url))("heavyFunction")
+  *     importInWorker<typeof import("./heavyFunction.js")>(new URL("./heavyFunction.js", import.meta.url).href)("heavyFunction")
   */
 export const importInWorker = importInWorker_
