@@ -4,10 +4,8 @@ import { cpus } from "os"
 import { Worker, parentPort, workerData } from "worker_threads"
 import { MessageTag, type ResultMessage, type TaskMessage, type ToChildMessage } from "./internal"
 
-type WorkerData = { k14nyo0s378girc3yy7an24u: undefined, ports: (MessagePort | undefined)[], taskCounts: Uint32Array }
-
-const isWorkerData = (workerData: unknown): workerData is WorkerData =>
-	!!workerData && typeof workerData == `object` && "k14nyo0s378girc3yy7an24u" in workerData
+const ParallelWorkerDataId = `HIL_y32xlOwuppjILq9lr`
+type ParallelWorkerData = { ports: (MessagePort | undefined)[], taskCounts: Uint32Array }
 
 const idsToPromiseCallbacks = new Map<number, { resolve: Resolver<any>, reject: Rejecter }>
 let idCounter = 0
@@ -21,8 +19,10 @@ const validateModuleName = (moduleName: string) => {
 		throw TypeError(`Cannot use relative imports. Use new URL("./relative-module.js", import.meta.url).href`)
 }
 
-if (isWorkerData(workerData)) {
-	const { ports, taskCounts } = workerData
+let parallelWorkerData
+
+if (parallelWorkerData = workerData?.[ParallelWorkerDataId]) {
+	const { ports, taskCounts } = parallelWorkerData as ParallelWorkerData
 	const workerIndex = ports.findIndex(ports => !ports)
 
 	parentPort!.on(`message`, async (message: TaskMessage) => handleTaskMessage(message, parentPort!))
@@ -101,8 +101,7 @@ if (isWorkerData(workerData)) {
 
 	const getWorkers = () => workersCache ||= cpuInfos.map((_, index) => {
 		const worker = new Worker(thisModuleUrl, {
-			workerData:
-				{ k14nyo0s378girc3yy7an24u: undefined, ports: messagePorts[index]!, taskCounts } satisfies WorkerData,
+			workerData: { [ParallelWorkerDataId]: { ports: messagePorts[index]!, taskCounts } satisfies ParallelWorkerData },
 			transferList: messagePorts[index]!.filter(Boolean) as any
 		})
 
